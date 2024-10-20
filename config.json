@@ -1,0 +1,19 @@
+{
+  "use_proxy": false,
+  "complete_task": true,
+  "play_game": true,
+  "claim_ref_enable": true,
+  "daily_reward_enable": true,
+  "game_rewards": {
+    "taps_min": 270,
+    "taps_max": 350,
+    "dogs_min": 25,
+    "dogs_max": 30
+  },
+  "protection": {
+    "random_delays": true,
+    "user_agent_rotation": true,
+    "request_throttling": true,
+    "session_variation": true
+  }
+}
