@@ -11,7 +11,7 @@ from colorama import Fore, Style, init
 
 init(autoreset=True)
 
-start_time = datetime.now()  # Tentukan waktu mulai saat bot dijalankan
+start_time = datetime.now()  # Define start time when bot is run
 
 headers = {
         'accept': 'application/json, text/plain, */*',
@@ -28,7 +28,7 @@ headers = {
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.0'
     }
 
-# Tambahkan variabel global untuk status proxy
+# Add global variable for proxy status
 proxy_active = False
 
 def load_credentials():
@@ -36,22 +36,35 @@ def load_credentials():
         with open('query.txt', 'r') as f:
             queries = [line.strip() for line in f.readlines()]
         if not queries:
-            print_("File query.txt kosong.")
+            log("Query.txt file is empty.")
             return None
         return queries
     except FileNotFoundError:
-        print_("File query.txt tidak ditemukan.")
+        log("Query.txt file not found.")
         return None
     except Exception as e:
-        print_(f"Terjadi kesalahan saat memuat query: {str(e)}")
+        log(f"An error occurred while loading queries: {str(e)}")
         return None
 
 def parse_query(query: str):
     parsed_query = parse_qs(query)
     parsed_query = {k: v[0] for k, v in parsed_query.items()}
-    user_data = json.loads(unquote(parsed_query['user']))
-    parsed_query['user'] = user_data
-    return parsed_query
+    
+    # Check if 'user' key exists in parsed_query
+    if 'user' not in parsed_query:
+        log("'user' key not found in query")
+        return None
+    
+    try:
+        user_data = json.loads(unquote(parsed_query['user']))
+        parsed_query['user'] = user_data
+        return parsed_query
+    except json.JSONDecodeError:
+        log("Failed to decode user JSON data")
+        return None
+    except Exception as e:
+        log(f"An error occurred while parsing query: {str(e)}")
+        return None
 
 def get(id):
         tokens = json.loads(open("tokens.json").read())
@@ -85,24 +98,24 @@ def delete_all():
     open("tokens.json", "w").write(json.dumps({}, indent=4))
 
 
-def print_(word):
+def log(message):
     now = datetime.now().isoformat(" ").split(".")[0]
     symbol = "⚔" if proxy_active else "✇"
-    print(f"{symbol} ║ {word}")
+    print(f"{symbol} ║ {message}")
 
-# Fungsi untuk membaca konfigurasi
+# Function to read configuration
 def load_config():
     with open('config.json', 'r') as f:
         config = json.load(f)
     return config
 
-# Fungsi untuk menambahkan delay acak
+# Function to add random delay
 def add_random_delay(min_delay=1, max_delay=5):
     if config['protection']['random_delays']:
         delay = random.uniform(min_delay, max_delay)
         time.sleep(delay)
 
-# Fungsi untuk merotasi User-Agent
+# Function to rotate User-Agent
 def get_random_user_agent():
     if config['protection']['user_agent_rotation']:
         user_agents = [
@@ -115,7 +128,7 @@ def get_random_user_agent():
     else:
         return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 
-# Fungsi untuk throttling request
+# Function for request throttling
 class RequestThrottler:
     def __init__(self, requests_per_minute):
         self.requests_per_minute = requests_per_minute
@@ -131,9 +144,9 @@ class RequestThrottler:
                     time.sleep(sleep_time)
             self.request_times.append(now)
 
-throttler = RequestThrottler(30)  # Batasi menjadi 30 request per menit
+throttler = RequestThrottler(30)  # Limit to 30 requests per minute
 
-# Modifikasi fungsi make_request
+# Modify make_request function
 def make_request(method, url, headers=None, json=None, data=None, use_proxy=False):
     config = load_config()
     retry_count = 0
@@ -170,7 +183,7 @@ def make_request(method, url, headers=None, json=None, data=None, use_proxy=Fals
             
             return response, current_proxy
         except requests.exceptions.RequestException as e:
-            print_(f"Request error: {e}")
+            log(f"Request error: {e}")
             if retry_count >= 4:
                 return None, None
             retry_count += 1
@@ -209,19 +222,19 @@ def check_tasks(token):
             
             for subs in subSections:
                 title_task = subs.get('title')
-                print_(f"Main Task Title : {title_task}")
+                log(f"Main Task Title : {title_task}")
                 tasks = subs.get('tasks')
                 for task in tasks:
                     sub_title = task.get('title',"")
                     if 'invite' in sub_title.lower():
-                        print_(f"{sub_title} Skipping Quest")
+                        log(f"{sub_title} Skipping Quest")
                     elif 'farm' in sub_title.lower():
-                        print_(f"{sub_title} Skipping Quest")
+                        log(f"{sub_title} Skipping Quest")
                     else:
                         if task['status'] == 'CLAIMED':
-                            print_(f"Task {title_task} claimed  | Status: {task['status']} | Reward: {task['reward']}")
+                            log(f"Task {title_task} claimed  | Status: {task['status']} | Reward: {task['reward']}")
                         elif task['status'] == 'NOT_STARTED':
-                            print_(f"Starting Task: {task['title']}")
+                            log(f"Starting Task: {task['title']}")
                             start_task(token, task['id'],sub_title)
                             validationType = task.get('validationType')
                             if validationType == 'KEYWORD':
@@ -236,9 +249,9 @@ def check_tasks(token):
                             time.sleep(5)
                             claim_task(token, task['id'],sub_title)
                         else:
-                            print_(f"Task already started: {sub_title} | Status: {task['status']} | Reward: {task['reward']}")
+                            log(f"Task already started: {sub_title} | Status: {task['status']} | Reward: {task['reward']}")
     else:
-        print_(f"Failed to get tasks")
+        log(f"Failed to get tasks")
     
 
 def start_task(token, task_id, title):
@@ -255,12 +268,12 @@ def start_task(token, task_id, title):
     try:
         response = make_request('post', url, headers=headers)
         if response is not None:
-            print_(f"Task {title} started")
+            log(f"Task {title} started")
         else:
-            print_(f"Failed to start task {title}")
+            log(f"Failed to start task {title}")
         return 
     except:
-        print_(f"Failed to start task {title} ")
+        log(f"Failed to start task {title} ")
 
 def validate_task(token, task_id, title, word=None):
     time.sleep(2)
@@ -277,16 +290,16 @@ def validate_task(token, task_id, title, word=None):
     try:
         response =  response = make_request('post',url, headers=headers, json=payload)
         if response is not None:
-            print_(f"Task {title} validating")
+            log(f"Task {title} validating")
         else:
-            print_(f"Failed to validate task {title}")
+            log(f"Failed to validate task {title}")
         return 
     except:
-        print_(f"Failed to validate task {title} ")
+        log(f"Failed to validate task {title} ")
 
 def claim_task(token, task_id,title):
     time.sleep(2)
-    print_(f"Claiming task {title}")
+    log(f"Claiming task {title}")
     url = f'https://earn-domain.blum.codes/api/v1/tasks/{task_id}/claim'
     headers = {
         'Authorization': f'Bearer {token}',
@@ -299,16 +312,16 @@ def claim_task(token, task_id,title):
     try:
         response =  response = make_request('post',url, headers=headers)
         if response is not None:
-            print_(f"Task {title} claimed")
+            log(f"Task {title} claimed")
         else:
-            print_(f"Failed to claim task {title}")
+            log(f"Failed to claim task {title}")
     except:
-        print_(f"Failed to claim task {title} ")
+        log(f"Failed to claim task {title} ")
 
         
 def get_new_token(query_id):
     import json
-    # Header untuk permintaan HTTP
+    # Header for HTTP request
     headers = {
         "accept": "application/json, text/plain, */*",
         "accept-language": "en-US,en;q=0.9",
@@ -321,17 +334,17 @@ def get_new_token(query_id):
     data = json.dumps({"query": query_id})
     url = "https://user-domain.blum.codes/api/v1/auth/provider/PROVIDER_TELEGRAM_MINI_APP"
     time.sleep(2)
-    print_(f"Getting Token...")
+    log(f"Getting Token...")
     response, _ = make_request('post', url, headers=headers, data=data)
     if response is not None:
-        print_(f"Token Created")
+        log(f"Token Created")
         response_json = response.json()
         return response_json['token']['refresh']
     else:
-        print_(f"Failed get token")
+        log(f"Failed get token")
         return None
 
-# Fungsi untuk mendapatkan informasi pengguna
+# Function to get user information
 def get_user_info(token):
     time.sleep(2)
     headers = {
@@ -358,9 +371,9 @@ def get_balance(token):
         if response is not None:
             return response.json()
         else:
-            print_(f"Failed getting data balance")
+            log(f"Failed getting data balance")
     except requests.exceptions.ConnectionError as e:
-        print_(f"Connection Failed ")
+        log(f"Connection Failed ")
 
 def play_game(token):
     time.sleep(2)
@@ -379,7 +392,7 @@ def play_game(token):
         else:
             return None
     except Exception as e:
-        print_(f"Failed play game, Error {e}")
+        log(f"Failed play game, Error {e}")
 
 def claim_game(token, game_id, point, dogs):
     time.sleep(2)
@@ -403,7 +416,7 @@ def claim_game(token, game_id, point, dogs):
                 return None
         
         except Exception as e:
-            print_(f"Failed Claim game, error: {e}")
+            log(f"Failed Claim game, error: {e}")
     else:
         return None
 
@@ -414,7 +427,7 @@ def get_game_id(token):
         while True:
             if trying == 0:
                 break
-            print_("Play Game : Game ID is None, retrying...")
+            log("Play Game : Game ID is None, retrying...")
             game_response = play_game(token)
             if game_response is not None:
                 game_id = game_response.get('gameId', None)
@@ -424,7 +437,7 @@ def get_game_id(token):
                 return game_response['gameId']
                 break
             else:
-                print_('Game id Not Found, trying to get')
+                log('Game id Not Found, trying to get')
             trying -= 1
     else:
         return game_response['gameId']
@@ -445,10 +458,10 @@ def claim_balance(token):
         if response is not None:
             return response.json()
         else:
-            print_("Failed Claim Balance")
+            log("Failed Claim Balance")
 
     except Exception as e:
-        print_(f"Failed claim balance, error: {e}")
+        log(f"Failed claim balance, error: {e}")
     return None
 
 def start_farming(token):
@@ -468,10 +481,10 @@ def start_farming(token):
         if response is not None:
             return response.json()
         else:
-            print_("Failed Claim Balance")
+            log("Failed Claim Balance")
 
     except Exception as e:
-        print_(f"Failed claim balance, error: {e}")
+        log(f"Failed claim balance, error: {e}")
     return None
 
 def check_balance_friend(token):
@@ -495,10 +508,10 @@ def check_balance_friend(token):
         if response is not None:
             return response.json()
         else:
-            print_("Failed Check ref")
+            log("Failed Check ref")
     
     except Exception as e:
-        print_(f"Failed Check ref, error: {e}")
+        log(f"Failed Check ref, error: {e}")
     return None
 
 def claim_balance_friend(token):
@@ -516,12 +529,12 @@ def claim_balance_friend(token):
         if response is not None:
             return response.json()
         else:
-            print_("Failed Claim ref Balance")
+            log("Failed Claim ref Balance")
     except Exception as e:
-        print_(f"Failed Claim ref, error: {e}")
+        log(f"Failed Claim ref, error: {e}")
     return None
 
-# cek daily 
+# check daily 
 import json
 def check_daily_reward(token):
     url = 'https://game-domain.blum.codes/api/v1/daily-reward'
@@ -550,12 +563,12 @@ def check_daily_reward(token):
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        print_(f"Failed to check daily reward: {str(e)}")
+        log(f"Failed to check daily reward: {str(e)}")
         if hasattr(e, 'response') and e.response is not None:
-            print_(f"Error response content: {e.response.text}")
+            log(f"Error response content: {e.response.text}")
         return None
     except json.JSONDecodeError:
-        print_("Failed to parse daily reward response")
+        log("Failed to parse daily reward response")
         return None
 
 
@@ -582,7 +595,7 @@ def check_tribe(token):
         else:
             return None
     except Exception as e:
-        print_(f"Failed Check Tribe, error: {e}")
+        log(f"Failed Check Tribe, error: {e}")
     return None
 
 
@@ -763,8 +776,16 @@ def main():
             clear_screen()
             print_header()
             useragents = get_random_user_agent()
-            parse = parse_query(query)
-            user = parse.get('user')
+            parsed_query = parse_query(query)
+            if parsed_query is None:
+                print_(f"Gagal parsing query untuk akun {index}")
+                continue
+            
+            user = parsed_query.get('user')
+            if user is None:
+                print_(f"Data user tidak ditemukan untuk akun {index}")
+                continue
+            
             add_random_delay(2, 5)
             print_(f"Account {index}  | {user.get('username','')}")
             
