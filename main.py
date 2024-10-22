@@ -30,7 +30,14 @@ headers = {
 
 # Add global variable for proxy status
 proxy_active = False
-
+def key_bot():
+    header = """
+╔═══════════════════ BLUM ══════════════════╗
+║              Bot Automation               ║
+║         Developed by @ItbaArts_Dev        ║
+╚═══════════════════════════════════════════╝
+    """
+    print(header)
 def load_credentials():
     try:
         with open('query.txt', 'r') as f:
